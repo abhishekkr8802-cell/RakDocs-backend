@@ -4,166 +4,118 @@
 //  Your API key stays here — never inside the mobile app
 // ─────────────────────────────────────────────────────────────
 
-require('dotenv').config();
-const express     = require('express');
-const multer      = require('multer');
-const cors        = require('cors');
+const express = require('express');
+const multer  = require('multer');
+const cors    = require('cors');
 const compression = require('compression');
-const fs          = require('fs');
-const path        = require('path');
+const { exec } = require('child_process');
+const fs   = require('fs');
+const path = require('path');
+const os   = require('os');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-if (!fs.existsSync('tmp')) fs.mkdirSync('tmp');
-
-// Trust Railway's proxy — required for rate limiting and correct IPs
-app.set('trust proxy', 1);
-
 app.use(compression());
-app.use(cors({ origin: '*' }));
+app.use(cors());
 app.use(express.json());
 
 const upload = multer({
-  dest: 'tmp/',
+  storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
 });
 
-// Simple in-memory rate limit — no proxy issues
-const requestCounts = {};
-function rateLimiter(req, res, next) {
-  const ip  = req.ip || 'unknown';
-  const now = Date.now();
-  if (!requestCounts[ip]) requestCounts[ip] = [];
-  requestCounts[ip] = requestCounts[ip].filter(t => now - t < 60 * 60 * 1000);
-  if (requestCounts[ip].length >= 20) {
-    return res.status(429).json({ error: 'Too many conversions. Please wait an hour.' });
-  }
-  requestCounts[ip].push(now);
-  next();
-}
+app.get('/', (req, res) => {
+  res.json({ status: 'RakDocs Backend Running ✅', version: '3.0.0', engine: 'LibreOffice (Free, No API Key)' });
+});
 
-const TOOL_MAP = {
-  'pdf-word':  'pdfoffice',
-  'word-pdf':  'officepdf',
-  'img-pdf':   'imagepdf',
-  'excel-pdf': 'officepdf',
-  'ppt-pdf':   'officepdf',
-  'pdf-txt':   'pdfocr',
-  'compress':  'compress',
-  'merge':     'merge',
-  'split':     'split',
-  'protect':   'protect',
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+const CONVERSION_MAP = {
+  'pdf-to-word':  { inputExt: 'pdf',  outputExt: 'docx', filter: 'MS Word 2007 XML' },
+  'pdf-to-excel': { inputExt: 'pdf',  outputExt: 'xlsx', filter: 'Calc MS Excel 2007 XML' },
+  'pdf-to-ppt':   { inputExt: 'pdf',  outputExt: 'pptx', filter: 'Impress MS PowerPoint 2007 XML' },
+  'pdf-to-jpg':   { inputExt: 'pdf',  outputExt: 'jpg',  filter: 'impress_jpg_Export' },
+  'pdf-to-txt':   { inputExt: 'pdf',  outputExt: 'txt',  filter: 'Text' },
+  'word-to-pdf':  { inputExt: 'docx', outputExt: 'pdf',  filter: 'writer_pdf_Export' },
+  'excel-to-pdf': { inputExt: 'xlsx', outputExt: 'pdf',  filter: 'calc_pdf_Export' },
+  'ppt-to-pdf':   { inputExt: 'pptx', outputExt: 'pdf',  filter: 'impress_pdf_Export' },
+  'jpg-to-pdf':   { inputExt: 'jpg',  outputExt: 'pdf',  filter: 'writer_pdf_Export' },
+  'png-to-pdf':   { inputExt: 'png',  outputExt: 'pdf',  filter: 'writer_pdf_Export' },
+  'compress-pdf': { inputExt: 'pdf',  outputExt: 'pdf',  filter: 'writer_pdf_Export' },
 };
 
-const OUTPUT_EXT = {
-  'pdf-word':  'docx',
-  'word-pdf':  'pdf',
-  'img-pdf':   'pdf',
-  'excel-pdf': 'pdf',
-  'ppt-pdf':   'pdf',
-  'pdf-txt':   'txt',
-  'compress':  'pdf',
-  'merge':     'pdf',
-  'split':     'zip',
-  'protect':   'pdf',
-};
-
-const MIME_TYPES = {
+const MIME_MAP = {
   pdf:  'application/pdf',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  jpg:  'image/jpeg',
+  png:  'image/png',
   txt:  'text/plain',
-  zip:  'application/zip',
 };
 
-app.get('/', (req, res) => {
-  res.json({ status: 'RakDocs Backend Running', version: '1.0.0' });
-});
+function convertWithLibreOffice(inputPath, outputDir, outputExt, filter) {
+  return new Promise((resolve, reject) => {
+    const cmd = `libreoffice --headless --infilter="${filter}" --convert-to ${outputExt} --outdir "${outputDir}" "${inputPath}"`;
+    console.log(`[LibreOffice] ${cmd}`);
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+    exec(cmd, { timeout: 120000 }, (error, stdout, stderr) => {
+      if (error) {
+        return reject(new Error('LibreOffice conversion failed: ' + (stderr || error.message)));
+      }
+      const baseName = path.basename(inputPath, path.extname(inputPath));
+      let outputPath = path.join(outputDir, `${baseName}.${outputExt}`);
 
-app.get('/test-keys', (req, res) => {
-  const pub = process.env.ILOVEPDF_PUBLIC_KEY;
-  const sec = process.env.ILOVEPDF_SECRET_KEY;
-  res.json({
-    public_key_set:     !!pub,
-    secret_key_set:     !!sec,
-    public_key_preview: pub ? pub.substring(0, 15) + '...' : 'MISSING',
+      if (!fs.existsSync(outputPath)) {
+        const files = fs.readdirSync(outputDir);
+        const found = files.find(f => f.endsWith('.' + outputExt));
+        if (found) return resolve(path.join(outputDir, found));
+        return reject(new Error('Output file not found. Dir: ' + files.join(', ')));
+      }
+      resolve(outputPath);
+    });
   });
-});
+}
 
-app.post('/convert', rateLimiter, upload.single('file'), async (req, res) => {
-  const tmpFiles = [];
+app.post('/convert', upload.single('file'), async (req, res) => {
+  const { conversionType } = req.body;
+
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  if (!conversionType || !CONVERSION_MAP[conversionType]) {
+    return res.status(400).json({ error: `Unknown type: ${conversionType}`, supported: Object.keys(CONVERSION_MAP) });
+  }
+
+  const config = CONVERSION_MAP[conversionType];
+  const baseName = (req.file.originalname || 'file').replace(/\.[^.]+$/, '');
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rakdocs-'));
+  const inputPath = path.join(tmpDir, `input.${config.inputExt}`);
+
+  console.log(`[Convert] type=${conversionType} file=${req.file.originalname} size=${req.file.size}`);
+
   try {
-    const { toolId } = req.body;
-    console.log(`[CONVERT] toolId=${toolId} file=${req.file?.originalname} size=${req.file?.size}`);
+    fs.writeFileSync(inputPath, req.file.buffer);
 
-    if (!req.file)         return res.status(400).json({ error: 'No file uploaded.' });
-    if (!TOOL_MAP[toolId]) return res.status(400).json({ error: `Unsupported tool: ${toolId}` });
+    const outputPath = await convertWithLibreOffice(inputPath, tmpDir, config.outputExt, config.filter);
+    const resultBuffer = fs.readFileSync(outputPath);
+    const outputFilename = `${baseName}_converted.${config.outputExt}`;
+    const mimeType = MIME_MAP[config.outputExt] || 'application/octet-stream';
 
-    const publicKey = process.env.ILOVEPDF_PUBLIC_KEY;
-    const secretKey = process.env.ILOVEPDF_SECRET_KEY;
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${outputFilename}"`);
+    res.setHeader('X-Output-Filename', outputFilename);
+    res.send(resultBuffer);
 
-    if (!publicKey || !secretKey) {
-      return res.status(500).json({ error: 'API keys not configured. Add ILOVEPDF_PUBLIC_KEY and ILOVEPDF_SECRET_KEY in Railway Variables tab.' });
-    }
-
-    const inputPath = req.file.path;
-    tmpFiles.push(inputPath);
-
-    const ILovePDFApi  = require('@ilovepdf/ilovepdf-nodejs');
-    const ILovePDFFile = require('@ilovepdf/ilovepdf-nodejs/ILovePDFFile');
-
-    const api  = new ILovePDFApi(publicKey, secretKey);
-    const task = api.newTask(TOOL_MAP[toolId]);
-    await task.start();
-    console.log('[ILOVEPDF] Task started');
-
-    const iFile = new ILovePDFFile(inputPath);
-    await task.addFile(iFile);
-    console.log('[ILOVEPDF] File added');
-
-    if      (toolId === 'compress') await task.process({ compression_level: 'recommended' });
-    else if (toolId === 'protect')  await task.process({ password: req.body.password || '1234' });
-    else if (toolId === 'pdf-txt')  await task.process({ ocr_langs: ['eng'] });
-    else                            await task.process();
-    console.log('[ILOVEPDF] Processed');
-
-    const outputExt  = OUTPUT_EXT[toolId];
-    const baseName   = req.file.originalname.replace(/\.[^.]+$/, '');
-    const outputName = `${baseName}_converted.${outputExt}`;
-    const outputPath = path.join('tmp', outputName);
-    tmpFiles.push(outputPath);
-
-    await task.download(outputPath);
-
-    if (!fs.existsSync(outputPath)) throw new Error('Output file missing after download.');
-
-    const stat = fs.statSync(outputPath);
-    console.log(`[DONE] ${outputName} | ${(stat.size / 1024).toFixed(0)}KB`);
-
-    res.setHeader('Content-Type', MIME_TYPES[outputExt] || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${outputName}"`);
-    res.setHeader('Content-Length', stat.size);
-    fs.createReadStream(outputPath).pipe(res);
-
+    console.log(`[Convert] ✅ ${outputFilename} (${resultBuffer.length} bytes)`);
   } catch (err) {
-    console.error('[ERROR]', err?.message || err);
-    if (!res.headersSent) {
-      res.status(500).json({ error: err?.message || 'Conversion failed.' });
-    }
+    console.error('[Convert] ❌', err.message);
+    res.status(500).json({ error: err.message });
   } finally {
-    setTimeout(() => {
-      tmpFiles.forEach(f => { try { if (fs.existsSync(f)) fs.unlinkSync(f); } catch (_) {} });
-    }, 3000);
+    try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch(e) {}
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`\n=== RakDocs Backend on port ${PORT} ===`);
-  console.log(`Public Key: ${process.env.ILOVEPDF_PUBLIC_KEY ? '✅ SET' : '❌ MISSING'}`);
-  console.log(`Secret Key: ${process.env.ILOVEPDF_SECRET_KEY ? '✅ SET' : '❌ MISSING'}`);
-  console.log(`========================================\n`);
+  console.log(`RakDocs Backend v3.0 on port ${PORT}`);
+  console.log(`Engine: LibreOffice — FREE, No API Key, No Limits`);
 });
