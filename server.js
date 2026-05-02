@@ -12,7 +12,8 @@ const rateLimit    = require('express-rate-limit');
 const compression  = require('compression');
 const fs           = require('fs');
 const path         = require('path');
-const ILovePDFApi  = require('@ilovepdf/ilovepdf-js');
+const ILovePDFApi  = require('@ilovepdf/ilovepdf-nodejs');
+const ILovePDFFile = require('@ilovepdf/ilovepdf-nodejs/ILovePDFFile');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -20,14 +21,13 @@ const PORT = process.env.PORT || 3000;
 if (!fs.existsSync('tmp')) fs.mkdirSync('tmp');
 
 app.use(compression());
+app.use(cors({ origin: '*' }));
+app.use(express.json());
 
 const upload = multer({
   dest: 'tmp/',
   limits: { fileSize: 50 * 1024 * 1024 },
 });
-
-app.use(cors({ origin: '*' }));
-app.use(express.json());
 
 const convertLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -80,43 +80,47 @@ app.post('/convert', convertLimiter, upload.single('file'), async (req, res) => 
   const tmpFiles = [];
   try {
     const { toolId } = req.body;
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
-    if (!toolId || !TOOL_MAP[toolId]) return res.status(400).json({ error: `Unsupported tool: ${toolId}` });
+    if (!req.file)              return res.status(400).json({ error: 'No file uploaded.' });
+    if (!TOOL_MAP[toolId])      return res.status(400).json({ error: `Unsupported tool: ${toolId}` });
 
     const publicKey = process.env.ILOVEPDF_PUBLIC_KEY;
     const secretKey = process.env.ILOVEPDF_SECRET_KEY;
     if (!publicKey || !secretKey) return res.status(500).json({ error: 'API keys missing.' });
 
-    const taskType  = TOOL_MAP[toolId];
-    const outputExt = OUTPUT_EXT[toolId];
     const inputPath = req.file.path;
     tmpFiles.push(inputPath);
 
     console.log(`[${new Date().toISOString()}] ${toolId} | ${req.file.originalname} | ${(req.file.size/1024).toFixed(0)}KB`);
 
+    // ilovepdf-nodejs uses both public + secret key
     const api  = new ILovePDFApi(publicKey, secretKey);
-    const task = api.newTask(taskType);
+    const task = api.newTask(TOOL_MAP[toolId]);
     await task.start();
-    await task.addFile(inputPath);
+
+    const iFile = new ILovePDFFile(inputPath);
+    await task.addFile(iFile);
 
     if      (toolId === 'compress') await task.process({ compression_level: 'recommended' });
     else if (toolId === 'protect')  await task.process({ password: req.body.password || '1234' });
     else if (toolId === 'pdf-txt')  await task.process({ ocr_langs: ['eng'] });
     else                            await task.process();
 
+    const outputExt  = OUTPUT_EXT[toolId];
     const baseName   = req.file.originalname.replace(/\.[^.]+$/, '');
     const outputName = `${baseName}_converted.${outputExt}`;
     const outputPath = path.join('tmp', outputName);
     tmpFiles.push(outputPath);
 
     await task.download(outputPath);
-    if (!fs.existsSync(outputPath)) throw new Error('Converted file not found.');
+
+    if (!fs.existsSync(outputPath)) throw new Error('Converted file not found after processing.');
 
     const stat = fs.statSync(outputPath);
+    console.log(`[${new Date().toISOString()}] Done: ${outputName} | ${(stat.size/1024).toFixed(0)}KB`);
+
     res.setHeader('Content-Type', MIME_TYPES[outputExt] || 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${outputName}"`);
     res.setHeader('Content-Length', stat.size);
-    res.setHeader('X-Output-Filename', outputName);
 
     fs.createReadStream(outputPath).pipe(res);
 
@@ -126,12 +130,12 @@ app.post('/convert', convertLimiter, upload.single('file'), async (req, res) => 
   } finally {
     setTimeout(() => {
       tmpFiles.forEach(f => { try { if (fs.existsSync(f)) fs.unlinkSync(f); } catch (_) {} });
-    }, 2000);
+    }, 3000);
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`\nRakDocs Backend on port ${PORT}`);
-  console.log(`Public Key: ${process.env.ILOVEPDF_PUBLIC_KEY ? 'SET' : 'MISSING'}`);
-  console.log(`Secret Key: ${process.env.ILOVEPDF_SECRET_KEY ? 'SET' : 'MISSING'}\n`);
+  console.log(`\nRakDocs Backend running on port ${PORT}`);
+  console.log(`Public Key: ${process.env.ILOVEPDF_PUBLIC_KEY ? '✅ SET' : '❌ MISSING'}`);
+  console.log(`Secret Key: ${process.env.ILOVEPDF_SECRET_KEY ? '✅ SET' : '❌ MISSING'}\n`);
 });
