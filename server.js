@@ -24,7 +24,7 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 },
 });
 
-app.get('/', (req, res) => res.json({ status: 'RakDocs Backend Running ✅', version: '10.0.0', engine: 'pdf2docx (Python)' }));
+app.get('/', (req, res) => res.json({ status: 'RakDocs Backend Running ✅', version: '11.0.0', engine: 'pdf2docx' }));
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 function run(cmd) {
@@ -38,10 +38,56 @@ function run(cmd) {
   });
 }
 
+// Python script for clean pdf2docx conversion
+function buildPythonScript(inputPath, outputPath) {
+  return `
+import sys
+try:
+    from pdf2docx import Converter
+    cv = Converter('${inputPath}')
+    cv.convert('${outputPath}', 
+        start=0, 
+        end=None,
+        multi_processing=False,
+        cpu_count=1
+    )
+    cv.close()
+    print('SUCCESS')
+except Exception as e:
+    print('ERROR:', str(e), file=sys.stderr)
+    sys.exit(1)
+`.trim();
+}
+
+const MIME_MAP = {
+  pdf:  'application/pdf',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  jpg:  'image/jpeg',
+  txt:  'text/plain',
+};
+
+const INPUT_EXT = {
+  'pdf-to-word':'pdf','pdf-to-excel':'pdf','pdf-to-ppt':'pdf',
+  'pdf-to-jpg':'pdf','pdf-to-txt':'pdf',
+  'word-to-pdf':'docx','excel-to-pdf':'xlsx','ppt-to-pdf':'pptx',
+  'jpg-to-pdf':'jpg','png-to-pdf':'png','compress-pdf':'pdf'
+};
+const OUTPUT_EXT = {
+  'pdf-to-word':'docx','pdf-to-excel':'xlsx','pdf-to-ppt':'pptx',
+  'pdf-to-jpg':'jpg','pdf-to-txt':'txt',
+  'word-to-pdf':'pdf','excel-to-pdf':'pdf','ppt-to-pdf':'pdf',
+  'jpg-to-pdf':'pdf','png-to-pdf':'pdf','compress-pdf':'pdf'
+};
+
 app.post('/convert', upload.single('file'), async (req, res) => {
   const { conversionType } = req.body;
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  if (!INPUT_EXT[conversionType]) return res.status(400).json({ error: `Unknown type: ${conversionType}` });
 
+  const inExt    = INPUT_EXT[conversionType];
+  const outExt   = OUTPUT_EXT[conversionType];
   const baseName = (req.file.originalname || 'file').replace(/\.[^.]+$/, '');
   const jobDir   = `/tmp/rk_${Date.now()}`;
   fs.mkdirSync(jobDir, { recursive: true });
@@ -49,47 +95,54 @@ app.post('/convert', upload.single('file'), async (req, res) => {
   console.log(`\n=== ${conversionType} | ${req.file.originalname} | ${req.file.size} bytes ===`);
 
   try {
+    const inputPath  = path.join(jobDir, `input.${inExt}`);
+    const outputPath = path.join(jobDir, `output.${outExt}`);
+    fs.writeFileSync(inputPath, req.file.buffer);
+
     if (conversionType === 'pdf-to-word') {
-      const inputPath  = path.join(jobDir, 'input.pdf');
-      const outputPath = path.join(jobDir, 'output.docx');
-      fs.writeFileSync(inputPath, req.file.buffer);
+      // Write python script to file (avoids shell escaping issues)
+      const pyScript = path.join(jobDir, 'convert.py');
+      fs.writeFileSync(pyScript, buildPythonScript(inputPath, outputPath));
 
-      // pdf2docx — best free PDF→DOCX converter
-      const { error, stderr } = await run(
-        `python3 -c "from pdf2docx import Converter; cv = Converter('${inputPath}'); cv.convert('${outputPath}'); cv.close()"`
-      );
+      const { error, stdout, stderr } = await run(`python3 "${pyScript}"`);
 
-      if (!fs.existsSync(outputPath)) {
-        throw new Error('pdf2docx failed: ' + (stderr || (error && error.message) || 'unknown'));
+      if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size < 100) {
+        throw new Error('pdf2docx conversion failed: ' + (stderr || 'output file empty or missing'));
       }
+      console.log('[pdf2docx ✅] Output:', fs.statSync(outputPath).size, 'bytes');
 
-      const buf = fs.readFileSync(outputPath);
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      res.setHeader('Content-Disposition', `attachment; filename="${baseName}_converted.docx"`);
-      res.setHeader('X-Output-Filename', `${baseName}_converted.docx`);
-      res.send(buf);
-      console.log(`[✅ DONE] ${baseName}_converted.docx — ${buf.length} bytes`);
+    } else if (conversionType === 'pdf-to-txt') {
+      // Use pdfminer via python for clean text extraction
+      const pyScript = path.join(jobDir, 'extract.py');
+      fs.writeFileSync(pyScript, `
+from pdfminer.high_level import extract_text
+text = extract_text('${inputPath}')
+with open('${outputPath}', 'w', encoding='utf-8') as f:
+    f.write(text)
+print('SUCCESS')
+      `.trim());
+      await run(`python3 "${pyScript}"`);
+      if (!fs.existsSync(outputPath)) throw new Error('PDF→TXT failed');
 
     } else {
-      // All other conversions — word/excel/ppt to PDF using LibreOffice
-      // (these work fine, only PDF→DOCX was broken)
-      const extMap = { 'word-to-pdf':'docx','excel-to-pdf':'xlsx','ppt-to-pdf':'pptx','jpg-to-pdf':'jpg','png-to-pdf':'png','compress-pdf':'pdf' };
-      const inExt  = extMap[conversionType] || 'pdf';
-      const inputPath = path.join(jobDir, `input.${inExt}`);
-      fs.writeFileSync(inputPath, req.file.buffer);
-
-      await run(`libreoffice --headless --convert-to pdf --outdir "${jobDir}" "${inputPath}"`);
-
-      const files   = fs.readdirSync(jobDir);
-      const outFile = files.find(f => f.endsWith('.pdf') && f !== `input.${inExt}`);
-      if (!outFile) throw new Error('Conversion failed');
-
-      const buf = fs.readFileSync(path.join(jobDir, outFile));
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${baseName}_converted.pdf"`);
-      res.send(buf);
-      console.log(`[✅ DONE] ${baseName}_converted.pdf — ${buf.length} bytes`);
+      // Office → PDF via LibreOffice (this works fine)
+      await run(`libreoffice --headless --convert-to ${outExt} --outdir "${jobDir}" "${inputPath}"`);
+      const files = fs.readdirSync(jobDir);
+      const found = files.find(f => f.endsWith('.' + outExt) && !f.startsWith('input.'));
+      if (!found) throw new Error(`Conversion to ${outExt} failed. Dir: [${files.join(', ')}]`);
+      // rename to outputPath for uniform handling below
+      fs.renameSync(path.join(jobDir, found), outputPath);
     }
+
+    const resultBuffer   = fs.readFileSync(outputPath);
+    const outputFilename = `${baseName}_converted.${outExt}`;
+
+    res.setHeader('Content-Type', MIME_MAP[outExt] || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${outputFilename}"`);
+    res.setHeader('X-Output-Filename', outputFilename);
+    res.send(resultBuffer);
+
+    console.log(`[✅ DONE] ${outputFilename} — ${resultBuffer.length} bytes`);
 
   } catch (err) {
     console.error('[❌ FAILED]', err.message);
@@ -100,7 +153,7 @@ app.post('/convert', upload.single('file'), async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`RakDocs v10.0 | Port: ${PORT} | Engine: pdf2docx`);
-  run('python3 -c "import pdf2docx; print(\'pdf2docx:\', pdf2docx.__version__)"')
+  console.log(`RakDocs v11.0 | Port: ${PORT}`);
+  run('python3 -c "from pdf2docx import Converter; print(\'pdf2docx ready ✅\')"')
     .then(r => console.log('[Python]', r.stdout.trim() || r.stderr.trim()));
 });
