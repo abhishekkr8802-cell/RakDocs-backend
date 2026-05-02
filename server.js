@@ -11,7 +11,6 @@ const compression = require('compression');
 const { exec } = require('child_process');
 const fs   = require('fs');
 const path = require('path');
-const os   = require('os');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -25,13 +24,28 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 },
 });
 
+// Use /app/tmp inside the container — Railway allows writes here
+const WORK_DIR = path.join('/app', 'tmp');
+if (!fs.existsSync(WORK_DIR)) fs.mkdirSync(WORK_DIR, { recursive: true });
+
 app.get('/', (req, res) => {
-  res.json({ status: 'RakDocs Backend Running ✅', version: '4.0.0', engine: 'LibreOffice (Free, No API Key)' });
+  res.json({ status: 'RakDocs Backend Running ✅', version: '5.0.0', engine: 'LibreOffice (Free, No API Key)', workDir: WORK_DIR });
 });
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-// MIME types for sending response
+// Test write permissions on startup
+app.get('/test-write', (req, res) => {
+  try {
+    const testFile = path.join(WORK_DIR, 'test.txt');
+    fs.writeFileSync(testFile, 'test');
+    fs.unlinkSync(testFile);
+    res.json({ writable: true, workDir: WORK_DIR });
+  } catch (e) {
+    res.json({ writable: false, error: e.message, workDir: WORK_DIR });
+  }
+});
+
 const MIME_MAP = {
   pdf:  'application/pdf',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -42,7 +56,6 @@ const MIME_MAP = {
   txt:  'text/plain',
 };
 
-// Input file extension per conversionType
 const INPUT_EXT = {
   'pdf-to-word':  'pdf',
   'pdf-to-excel': 'pdf',
@@ -57,7 +70,6 @@ const INPUT_EXT = {
   'compress-pdf': 'pdf',
 };
 
-// Output extension per conversionType
 const OUTPUT_EXT = {
   'pdf-to-word':  'docx',
   'pdf-to-excel': 'xlsx',
@@ -72,71 +84,21 @@ const OUTPUT_EXT = {
   'compress-pdf': 'pdf',
 };
 
-// Build the correct LibreOffice command for each conversion
-function buildLibreOfficeCommand(conversionType, inputPath, outputDir) {
-  const outExt = OUTPUT_EXT[conversionType];
-
+function buildCommand(conversionType, inputPath, outputDir) {
   switch (conversionType) {
-    // PDF → DOCX: use writer filter
     case 'pdf-to-word':
       return `libreoffice --headless --convert-to docx:"MS Word 2007 XML" --outdir "${outputDir}" "${inputPath}"`;
-
-    // PDF → XLSX
     case 'pdf-to-excel':
       return `libreoffice --headless --convert-to xlsx:"Calc MS Excel 2007 XML" --outdir "${outputDir}" "${inputPath}"`;
-
-    // PDF → PPTX
     case 'pdf-to-ppt':
       return `libreoffice --headless --convert-to pptx:"Impress MS PowerPoint 2007 XML" --outdir "${outputDir}" "${inputPath}"`;
-
-    // PDF → JPG
     case 'pdf-to-jpg':
       return `libreoffice --headless --convert-to jpg --outdir "${outputDir}" "${inputPath}"`;
-
-    // PDF → TXT
     case 'pdf-to-txt':
       return `libreoffice --headless --convert-to txt:Text --outdir "${outputDir}" "${inputPath}"`;
-
-    // Office → PDF (all use same command)
-    case 'word-to-pdf':
-    case 'excel-to-pdf':
-    case 'ppt-to-pdf':
-    case 'jpg-to-pdf':
-    case 'png-to-pdf':
-    case 'compress-pdf':
-      return `libreoffice --headless --convert-to pdf --outdir "${outputDir}" "${inputPath}"`;
-
     default:
-      return null;
+      return `libreoffice --headless --convert-to pdf --outdir "${outputDir}" "${inputPath}"`;
   }
-}
-
-function runLibreOffice(cmd, outputDir, outputExt) {
-  return new Promise((resolve, reject) => {
-    console.log(`[LibreOffice CMD] ${cmd}`);
-
-    exec(cmd, { timeout: 120000 }, (error, stdout, stderr) => {
-      console.log('[LibreOffice STDOUT]', stdout);
-      if (stderr) console.log('[LibreOffice STDERR]', stderr);
-
-      // Find output file — LibreOffice names it after input file
-      try {
-        const files = fs.readdirSync(outputDir);
-        console.log('[LibreOffice DIR]', files);
-        const found = files.find(f => f.toLowerCase().endsWith('.' + outputExt));
-        if (found) {
-          return resolve(path.join(outputDir, found));
-        }
-        // If nothing found, check if there was an error
-        if (error) {
-          return reject(new Error('LibreOffice error: ' + (stderr || error.message)));
-        }
-        return reject(new Error('Output file not created. Files in dir: ' + files.join(', ')));
-      } catch (e) {
-        reject(e);
-      }
-    });
-  });
 }
 
 app.post('/convert', upload.single('file'), async (req, res) => {
@@ -144,53 +106,80 @@ app.post('/convert', upload.single('file'), async (req, res) => {
 
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   if (!conversionType || !INPUT_EXT[conversionType]) {
-    return res.status(400).json({
-      error: `Unknown conversion type: "${conversionType}"`,
-      supported: Object.keys(INPUT_EXT),
-    });
+    return res.status(400).json({ error: `Unknown type: "${conversionType}"`, supported: Object.keys(INPUT_EXT) });
   }
 
-  const inExt  = INPUT_EXT[conversionType];
-  const outExt = OUTPUT_EXT[conversionType];
+  const inExt    = INPUT_EXT[conversionType];
+  const outExt   = OUTPUT_EXT[conversionType];
   const baseName = (req.file.originalname || 'file').replace(/\.[^.]+$/, '');
+  const jobId    = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  const jobDir   = path.join(WORK_DIR, jobId);
 
-  console.log(`\n[Convert] type=${conversionType} file=${req.file.originalname} size=${req.file.size}`);
-
-  // Create unique temp dir
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rakdocs-'));
-  // Name input file properly — LibreOffice uses this as base for output name
-  const inputPath = path.join(tmpDir, `rakfile.${inExt}`);
+  console.log(`\n[Convert] type=${conversionType} file=${req.file.originalname} size=${req.file.size} jobDir=${jobDir}`);
 
   try {
+    // Create job directory
+    fs.mkdirSync(jobDir, { recursive: true });
+
+    const inputPath = path.join(jobDir, `rakfile.${inExt}`);
     fs.writeFileSync(inputPath, req.file.buffer);
-    console.log(`[Convert] Input written: ${inputPath}`);
+    console.log(`[Convert] Written to: ${inputPath} (${req.file.buffer.length} bytes)`);
 
-    const cmd = buildLibreOfficeCommand(conversionType, inputPath, tmpDir);
-    if (!cmd) throw new Error('Could not build conversion command');
+    // Verify write worked
+    if (!fs.existsSync(inputPath)) throw new Error('Failed to write input file');
 
-    const outputPath = await runLibreOffice(cmd, tmpDir, outExt);
+    const cmd = buildCommand(conversionType, inputPath, jobDir);
+    console.log(`[LibreOffice CMD] ${cmd}`);
+
+    // Run LibreOffice
+    await new Promise((resolve, reject) => {
+      exec(cmd, { timeout: 120000, env: { ...process.env, HOME: jobDir } }, (error, stdout, stderr) => {
+        console.log('[STDOUT]', stdout);
+        console.log('[STDERR]', stderr);
+        if (error && !stderr.includes('Warning')) {
+          return reject(new Error('LibreOffice failed: ' + stderr));
+        }
+        resolve();
+      });
+    });
+
+    // Find output file
+    const files = fs.readdirSync(jobDir);
+    console.log('[JobDir files]', files);
+    const outputFile = files.find(f => f.toLowerCase().endsWith('.' + outExt) && f !== `rakfile.${inExt}`);
+
+    if (!outputFile) {
+      throw new Error(`Conversion produced no output. Files: [${files.join(', ')}]`);
+    }
+
+    const outputPath   = path.join(jobDir, outputFile);
     const resultBuffer = fs.readFileSync(outputPath);
-
     const outputFilename = `${baseName}_converted.${outExt}`;
-    const mimeType = MIME_MAP[outExt] || 'application/octet-stream';
 
-    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Type', MIME_MAP[outExt] || 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${outputFilename}"`);
     res.setHeader('X-Output-Filename', outputFilename);
     res.send(resultBuffer);
 
-    console.log(`[Convert] ✅ Success: ${outputFilename} (${resultBuffer.length} bytes)`);
+    console.log(`[Convert] ✅ Done: ${outputFilename} (${resultBuffer.length} bytes)`);
 
   } catch (err) {
-    console.error('[Convert] ❌ Error:', err.message);
+    console.error('[Convert] ❌', err.message);
     res.status(500).json({ error: err.message });
   } finally {
-    try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch(e) {}
+    try { fs.rmSync(jobDir, { recursive: true, force: true }); } catch(e) {}
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`RakDocs Backend v4.0 on port ${PORT}`);
-  console.log(`Engine: LibreOffice — FREE, No API Key, No Limits`);
-  console.log(`Supported: ${Object.keys(INPUT_EXT).join(', ')}`);
+  console.log(`RakDocs Backend v5.0 on port ${PORT}`);
+  console.log(`Work dir: ${WORK_DIR}`);
+  console.log(`Testing write access...`);
+  try {
+    fs.writeFileSync(path.join(WORK_DIR, 'startup-test.txt'), 'ok');
+    fs.unlinkSync(path.join(WORK_DIR, 'startup-test.txt'));
+    console.log(`✅ Write access confirmed: ${WORK_DIR}`);
+  } catch(e) {
+    console.error(`❌ Write access FAILED: ${e.message}`);
+  }
 });
