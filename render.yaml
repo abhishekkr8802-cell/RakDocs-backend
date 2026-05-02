@@ -1,0 +1,17 @@
+# render.yaml — Render.com deployment config
+# Push this to GitHub and Render auto-deploys your backend FREE
+
+services:
+  - type: web
+    name: docshift-backend
+    env: node
+    plan: free          # Free tier — 750 hours/month, sleeps after 15min idle
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: ILOVEPDF_PUBLIC_KEY
+        sync: false     # You enter this manually in Render dashboard
+      - key: ILOVEPDF_SECRET_KEY
+        sync: false     # You enter this manually in Render dashboard
+      - key: NODE_ENV
+        value: production
