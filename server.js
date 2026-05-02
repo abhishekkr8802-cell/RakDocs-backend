@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-//  DocShift Backend — Production-ready conversion server
+//  RakDocs Backend — Production-ready conversion server
 //  Deploy on Render.com for FREE (no credit card needed)
 //  Your API key stays here — never inside the mobile app
 // ─────────────────────────────────────────────────────────────
