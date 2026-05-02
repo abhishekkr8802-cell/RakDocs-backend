@@ -24,11 +24,74 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 },
 });
 
-const BASE_DIR = '/app/tmp';
-if (!fs.existsSync(BASE_DIR)) fs.mkdirSync(BASE_DIR, { recursive: true });
+// Find a writable directory
+function findWritableDir() {
+  const candidates = [
+    '/app/tmp',
+    '/tmp',
+    '/var/tmp',
+    '/run/tmp',
+    process.env.TMPDIR || '',
+    '/home',
+    '/root',
+  ].filter(Boolean);
 
-app.get('/', (req, res) => res.json({ status: 'RakDocs Backend Running ✅', version: '6.0.0', engine: 'LibreOffice' }));
+  for (const dir of candidates) {
+    try {
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const testFile = path.join(dir, `.write_test_${Date.now()}`);
+      fs.writeFileSync(testFile, 'test');
+      fs.unlinkSync(testFile);
+      return dir;
+    } catch (e) {
+      // not writable, try next
+    }
+  }
+  return null;
+}
+
+const BASE_DIR = findWritableDir();
+
+app.get('/', (req, res) => res.json({
+  status: 'RakDocs Backend Running ✅',
+  version: '7.0.0',
+  engine: 'LibreOffice',
+  writableDir: BASE_DIR || 'NONE FOUND ❌',
+}));
+
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+// Diagnostic endpoint — test all dirs and libreoffice
+app.get('/diag', (req, res) => {
+  const dirs = ['/app/tmp', '/tmp', '/var/tmp', '/run', '/home', '/root', process.env.TMPDIR || 'N/A'];
+  const results = {};
+
+  for (const dir of dirs) {
+    try {
+      if (!fs.existsSync(dir)) {
+        results[dir] = 'does not exist';
+        continue;
+      }
+      const testFile = path.join(dir, `.test_${Date.now()}`);
+      fs.writeFileSync(testFile, 'ok');
+      fs.unlinkSync(testFile);
+      results[dir] = '✅ writable';
+    } catch (e) {
+      results[dir] = `❌ ${e.message}`;
+    }
+  }
+
+  // Check libreoffice binary
+  exec('which libreoffice && libreoffice --version', (err, stdout) => {
+    res.json({
+      directories: results,
+      libreoffice: stdout.trim() || (err && err.message) || 'not found',
+      selectedWorkDir: BASE_DIR,
+      env_TMPDIR: process.env.TMPDIR,
+      env_HOME: process.env.HOME,
+    });
+  });
+});
 
 const MIME_MAP = {
   pdf:  'application/pdf',
@@ -45,19 +108,18 @@ const OUTPUT_EXT = { 'pdf-to-word':'docx','pdf-to-excel':'xlsx','pdf-to-ppt':'pp
 app.post('/convert', upload.single('file'), async (req, res) => {
   const { conversionType } = req.body;
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  if (!INPUT_EXT[conversionType]) return res.status(400).json({ error: `Unknown type: ${conversionType}`, supported: Object.keys(INPUT_EXT) });
+  if (!INPUT_EXT[conversionType]) return res.status(400).json({ error: `Unknown type: ${conversionType}` });
+  if (!BASE_DIR) return res.status(500).json({ error: 'No writable directory found on server' });
 
   const inExt    = INPUT_EXT[conversionType];
   const outExt   = OUTPUT_EXT[conversionType];
   const baseName = (req.file.originalname || 'file').replace(/\.[^.]+$/, '');
-  const jobId    = `job_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+  const jobId    = `job_${Date.now()}`;
+  const inputDir  = path.join(BASE_DIR, jobId, 'in');
+  const outputDir = path.join(BASE_DIR, jobId, 'out');
+  const loHome    = path.join(BASE_DIR, jobId, 'lo');
 
-  // Separate dirs for input, output, and LibreOffice home
-  const inputDir  = path.join(BASE_DIR, jobId, 'input');
-  const outputDir = path.join(BASE_DIR, jobId, 'output');
-  const loHome    = path.join(BASE_DIR, jobId, 'lo_home');
-
-  console.log(`\n[Convert] ${conversionType} | ${req.file.originalname} | ${req.file.size} bytes`);
+  console.log(`\n[Convert] ${conversionType} | ${req.file.originalname} | BASE_DIR=${BASE_DIR}`);
 
   try {
     fs.mkdirSync(inputDir,  { recursive: true });
@@ -66,13 +128,10 @@ app.post('/convert', upload.single('file'), async (req, res) => {
 
     const inputPath = path.join(inputDir, `file.${inExt}`);
     fs.writeFileSync(inputPath, req.file.buffer);
-    console.log(`[Input] ${inputPath}`);
 
-    // Build command — separate outdir from input dir
     let convertTo = outExt;
     if (conversionType === 'pdf-to-word')  convertTo = 'docx:"MS Word 2007 XML"';
     if (conversionType === 'pdf-to-excel') convertTo = 'xlsx:"Calc MS Excel 2007 XML"';
-    if (conversionType === 'pdf-to-ppt')   convertTo = 'pptx:"Impress MS PowerPoint 2007 XML"';
     if (conversionType === 'pdf-to-txt')   convertTo = 'txt:Text';
 
     const cmd = `libreoffice --headless --convert-to ${convertTo} --outdir "${outputDir}" "${inputPath}"`;
@@ -84,26 +143,22 @@ app.post('/convert', upload.single('file'), async (req, res) => {
         env: {
           ...process.env,
           HOME: loHome,
+          TMPDIR: loHome,
           UserInstallation: `file://${loHome}`,
+          SAL_USE_VCLPLUGIN: 'svp',
         }
       }, (error, stdout, stderr) => {
         console.log('[STDOUT]', stdout.trim());
-        if (stderr.trim()) console.log('[STDERR]', stderr.trim());
-        // LibreOffice exits 0 even on some warnings — check output dir
-        resolve();
+        console.log('[STDERR]', stderr.trim());
+        console.log('[Output dir contents]', fs.readdirSync(outputDir));
+        resolve(); // always resolve — we check output dir ourselves
       });
     });
 
     const outFiles = fs.readdirSync(outputDir);
-    console.log('[Output dir]', outFiles);
+    const found    = outFiles.find(f => f.toLowerCase().endsWith('.' + outExt));
 
-    const found = outFiles.find(f => f.toLowerCase().endsWith('.' + outExt));
-    if (!found) {
-      // Extra debug — check input dir too
-      const inFiles = fs.readdirSync(inputDir);
-      console.log('[Input dir]', inFiles);
-      throw new Error(`No output file created. Output dir: [${outFiles.join(', ')}]`);
-    }
+    if (!found) throw new Error(`LibreOffice produced no output. Dir: [${outFiles.join(', ')}]`);
 
     const resultBuffer   = fs.readFileSync(path.join(outputDir, found));
     const outputFilename = `${baseName}_converted.${outExt}`;
@@ -113,10 +168,10 @@ app.post('/convert', upload.single('file'), async (req, res) => {
     res.setHeader('X-Output-Filename', outputFilename);
     res.send(resultBuffer);
 
-    console.log(`[✅ Done] ${outputFilename} — ${resultBuffer.length} bytes`);
+    console.log(`[✅] ${outputFilename} — ${resultBuffer.length} bytes`);
 
   } catch (err) {
-    console.error('[❌ Error]', err.message);
+    console.error('[❌]', err.message);
     res.status(500).json({ error: err.message });
   } finally {
     try { fs.rmSync(path.join(BASE_DIR, jobId), { recursive: true, force: true }); } catch(e) {}
@@ -124,11 +179,5 @@ app.post('/convert', upload.single('file'), async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`RakDocs v6.0 on port ${PORT} | WorkDir: ${BASE_DIR}`);
-  // Confirm write access
-  try {
-    fs.writeFileSync(path.join(BASE_DIR, '.write_test'), 'ok');
-    fs.unlinkSync(path.join(BASE_DIR, '.write_test'));
-    console.log(`✅ Write access OK: ${BASE_DIR}`);
-  } catch(e) { console.error(`❌ Write FAILED: ${e.message}`); }
+  console.log(`RakDocs v7.0 | Port: ${PORT} | WorkDir: ${BASE_DIR || 'NOT FOUND ❌'}`);
 });
