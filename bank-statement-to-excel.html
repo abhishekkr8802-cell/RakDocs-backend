@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<!-- ═══ PRIMARY SEO ═══════════════════════════════════════════ -->
+<title>Bank Statement to Excel Converter — Free Online | RakDocs</title>
+<meta name="description" content="Convert bank statement PDF to Excel (XLSX) free online. Extract transactions, dates, amounts automatically. No signup, no software. Works with all banks — HDFC, SBI, ICICI, Axis, Kotak and more."/>
+<meta name="keywords" content="bank statement to excel, convert bank statement PDF to excel, bank statement PDF converter, bank statement to xlsx free, extract transactions from bank statement, bank statement converter online free, HDFC bank statement to excel, SBI bank statement to excel, ICICI bank statement excel, bank statement data extractor"/>
+<meta name="author" content="RakDocs"/>
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"/>
+<link rel="canonical" href="https://rakdocs.netlify.app/tools/bank-statement-to-excel.html"/>
+
+<!-- ═══ OPEN GRAPH ═════════════════════════════════════════════ -->
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://rakdocs.netlify.app/tools/bank-statement-to-excel.html"/>
+<meta property="og:title" content="Bank Statement to Excel Converter — Free Online | RakDocs"/>
+<meta property="og:description" content="Convert your bank statement PDF to Excel free. Extracts all transactions, dates, and amounts automatically. Works with HDFC, SBI, ICICI, Axis, Kotak and 100+ banks."/>
+<meta property="og:image" content="https://rakdocs.netlify.app/og-image.png"/>
+<meta property="og:site_name" content="RakDocs"/>
+<meta property="og:locale" content="en_US"/>
+
+<!-- ═══ TWITTER CARD ══════════════════════════════════════════ -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Bank Statement to Excel — Free | RakDocs"/>
+<meta name="twitter:description" content="Convert bank statement PDF to Excel free. Auto-extracts transactions, amounts, dates. Works with all Indian and international banks."/>
+<meta name="twitter:image" content="https://rakdocs.netlify.app/og-image.png"/>
+
+<!-- ═══ SCHEMA.ORG STRUCTURED DATA ════════════════════════════ -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {"@type":"ListItem","position":1,"name":"Home","item":"https://rakdocs.netlify.app/"},
+        {"@type":"ListItem","position":2,"name":"Tools","item":"https://rakdocs.netlify.app/#tools"},
+        {"@type":"ListItem","position":3,"name":"Bank Statement to Excel","item":"https://rakdocs.netlify.app/tools/bank-statement-to-excel.html"}
+      ]
+    },
+    {
+      "@type": "WebApplication",
+      "name": "Bank Statement to Excel Converter",
+      "url": "https://rakdocs.netlify.app/tools/bank-statement-to-excel.html",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Web Browser",
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+      "description": "Free online tool to convert bank statement PDFs into Excel spreadsheets. Automatically extracts transaction dates, descriptions, debit/credit amounts, and balance. Works with HDFC, SBI, ICICI, Axis, Kotak, and 100+ banks worldwide."
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is the bank statement to Excel converter free?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes, completely free. No signup, no credit card, no hidden fees. Upload your bank statement PDF and download the Excel file instantly."}
+        },
+        {
+          "@type": "Question",
+          "name": "Which banks are supported?",
+          "acceptedAnswer": {"@type": "Answer", "text": "RakDocs works with bank statements from HDFC Bank, SBI, ICICI Bank, Axis Bank, Kotak Mahindra, Bank of Baroda, Punjab National Bank, Yes Bank, and most international banks. Both digital (text-based) PDFs and scanned statements are supported."}
+        },
+        {
+          "@type": "Question",
+          "name": "Is my bank statement safe to upload?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. Your file is processed securely on our server and deleted immediately after conversion. We never store, read, or share your financial data. The conversion happens in seconds and no one at RakDocs ever sees your file."}
+        },
+        {
+          "@type": "Question",
+          "name": "What data gets extracted into Excel?",
+          "acceptedAnswer": {"@type": "Answer", "text": "The converter extracts transaction dates, narration/description, debit amounts, credit amounts, and closing balance into separate columns in Excel. Each transaction becomes one row for easy filtering and analysis."}
+        },
+        {
+          "@type": "Question",
+          "name": "What if my bank statement is password protected?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Password-protected PDFs are not supported directly. Remove the password first using a PDF unlocker tool, then upload the unlocked PDF to convert to Excel."}
+        },
+        {
+          "@type": "Question",
+          "name": "Can I convert scanned bank statements?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. Scanned bank statement PDFs are processed using OCR technology. Accuracy is very high for clearly scanned documents. Digital (text-based) PDFs from your bank's net banking portal will give the best results."}
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<!-- ═══ PERFORMANCE ═══════════════════════════════════════════ -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="dns-prefetch" href="https://rakdocs-backend-production.up.railway.app"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #06060a;
+  --surface: #0e0e18;
+  --card: #13131f;
+  --border: #1e1e30;
+  --accent: #7c6dfa;
+  --accent2: #fa6d8e;
+  --accent3: #6dfaaa;
+  --text: #eeeef5;
+  --muted: #6060a0;
+  --font-head: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; overflow-x: hidden; }
+body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; }
+.blob { position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.12; pointer-events: none; z-index: 0; }
+.blob-1 { width: 600px; height: 600px; background: var(--accent); top: -200px; left: -100px; }
+.blob-2 { width: 400px; height: 400px; background: var(--accent2); bottom: -100px; right: -100px; }
+nav { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 16px 40px; background: rgba(6,6,10,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
+.nav-logo { font-family: var(--font-head); font-size: 24px; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; text-decoration: none; }
+.nav-logo span { color: var(--accent2); }
+.nav-links { display: flex; gap: 32px; }
+.nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
+.nav-links a:hover { color: var(--text); }
+.nav-cta { background: var(--accent); color: #fff; padding: 10px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; transition: opacity 0.2s, transform 0.2s; }
+.nav-cta:hover { opacity: 0.85; transform: translateY(-1px); }
+.breadcrumb { position: relative; z-index: 1; padding: 16px 40px; font-size: 13px; color: var(--muted); }
+.breadcrumb a { color: var(--muted); text-decoration: none; }
+.breadcrumb a:hover { color: var(--accent); }
+.tool-hero { position: relative; z-index: 1; text-align: center; padding: 60px 20px 40px; }
+.tool-hero-icon { font-size: 64px; margin-bottom: 20px; display: block; }
+.tool-hero h1 { font-family: var(--font-head); font-size: clamp(36px,6vw,64px); font-weight: 800; line-height: 1.05; letter-spacing: -1.5px; margin-bottom: 16px; }
+.tool-hero h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.tool-hero p { font-size: clamp(15px,2vw,18px); color: var(--muted); max-width: 600px; margin: 0 auto 16px; line-height: 1.6; }
+.bank-badges { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 0 auto 40px; max-width: 640px; }
+.bank-badge { background: rgba(124,109,250,0.08); border: 1px solid rgba(124,109,250,0.2); border-radius: 100px; padding: 5px 14px; font-size: 12px; color: var(--muted); font-weight: 500; }
+.converter-section { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; padding: 0 20px 60px; }
+.converter-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 40px; position: relative; overflow: hidden; }
+.converter-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+.format-flow { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 32px; }
+.format-pill { padding: 8px 20px; border-radius: 10px; font-family: var(--font-head); font-size: 15px; font-weight: 700; }
+.format-from { background: rgba(124,109,250,0.12); color: var(--accent); }
+.format-arrow { color: var(--muted); font-size: 24px; }
+.format-to { background: rgba(250,109,142,0.12); color: var(--accent2); }
+.drop-zone { border: 2px dashed var(--border); border-radius: 16px; padding: 60px 20px; text-align: center; cursor: pointer; transition: all 0.3s; }
+.drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(124,109,250,0.04); }
+.drop-zone-icon { font-size: 56px; margin-bottom: 16px; display: block; }
+.drop-zone-title { font-family: var(--font-head); font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.drop-zone-sub { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+.browse-btn { display: inline-block; background: rgba(124,109,250,0.15); border: 1px solid rgba(124,109,250,0.3); color: var(--accent); padding: 12px 28px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: var(--font-body); }
+.browse-btn:hover { background: rgba(124,109,250,0.25); }
+#file-input { display: none; }
+.file-selected { display: none; align-items: center; gap: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px; margin-top: 20px; }
+.file-selected.show { display: flex; }
+.file-icon-big { font-size: 36px; }
+.file-info { flex: 1; }
+.file-name-display { font-size: 15px; font-weight: 700; color: var(--text); }
+.file-size-display { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.file-remove { background: rgba(250,109,142,0.1); border: none; color: var(--accent2); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: var(--font-body); transition: background 0.2s; }
+.file-remove:hover { background: rgba(250,109,142,0.2); }
+.convert-btn { width: 100%; padding: 20px; background: linear-gradient(135deg, var(--accent), #9c6dfa); border: none; border-radius: 16px; color: #fff; font-family: var(--font-head); font-size: 18px; font-weight: 700; cursor: pointer; transition: all 0.3s; margin-top: 24px; }
+.convert-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(124,109,250,0.35); }
+.convert-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.progress-section { display: none; margin-top: 24px; }
+.progress-section.show { display: block; }
+.progress-step-text { font-size: 14px; color: var(--muted); margin-bottom: 10px; font-weight: 500; }
+.progress-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 3px; transition: width 0.4s ease; width: 0%; }
+.success-section { display: none; margin-top: 24px; background: rgba(109,250,170,0.06); border: 1.5px solid rgba(109,250,170,0.25); border-radius: 16px; padding: 24px; text-align: center; }
+.success-section.show { display: block; }
+.success-icon { font-size: 48px; margin-bottom: 12px; display: block; }
+.success-title { font-family: var(--font-head); font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.success-sub { font-size: 14px; color: var(--accent3); margin-bottom: 20px; }
+.download-btn { display: inline-flex; align-items: center; gap: 10px; background: var(--accent3); color: #06060a; padding: 14px 32px; border-radius: 12px; font-family: var(--font-head); font-size: 16px; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; }
+.download-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(109,250,170,0.3); }
+.error-msg { display: none; background: rgba(250,109,142,0.08); border: 1px solid rgba(250,109,142,0.25); border-radius: 12px; padding: 14px 18px; color: var(--accent2); font-size: 14px; margin-top: 16px; font-weight: 500; }
+.error-msg.show { display: block; }
+
+/* ── FEATURES STRIP ── */
+.features-strip { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; padding: 0 20px 60px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.feature-item { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+.feature-item-icon { font-size: 28px; margin-bottom: 10px; display: block; }
+.feature-item-title { font-family: var(--font-head); font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.feature-item-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+.info-section { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; padding: 0 20px 60px; }
+.info-section h2 { font-family: var(--font-head); font-size: clamp(24px,4vw,36px); font-weight: 800; margin-bottom: 20px; letter-spacing: -0.5px; }
+.info-section p { color: var(--muted); font-size: 15px; line-height: 1.8; margin-bottom: 16px; }
+.other-tools { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 0 20px 80px; }
+.other-tools h2 { font-family: var(--font-head); font-size: clamp(24px,4vw,36px); font-weight: 800; margin-bottom: 32px; letter-spacing: -0.5px; text-align: center; }
+.tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: 12px; }
+.tool-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; text-decoration: none; display: block; transition: all 0.25s; }
+.tool-card:hover { border-color: var(--accent); transform: translateY(-3px); background: rgba(124,109,250,0.05); }
+.tool-card-icon { font-size: 26px; margin-bottom: 8px; display: block; }
+.tool-card-name { font-family: var(--font-head); font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.tool-card-desc { font-size: 11px; color: var(--muted); }
+.faq-section { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; padding: 0 20px 80px; }
+.faq-section h2 { font-family: var(--font-head); font-size: clamp(24px,4vw,36px); font-weight: 800; margin-bottom: 32px; letter-spacing: -0.5px; }
+.faq-item { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 10px; }
+.faq-btn { width: 100%; text-align: left; padding: 18px 22px; background: none; border: none; color: var(--text); font-family: var(--font-head); font-size: 15px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+.faq-icon { color: var(--accent); font-size: 20px; }
+.faq-answer { display: none; padding: 0 22px 18px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+footer { position: relative; z-index: 1; border-top: 1px solid var(--border); padding: 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+.footer-logo { font-family: var(--font-head); font-size: 20px; font-weight: 800; color: var(--accent); text-decoration: none; }
+.footer-links { display: flex; gap: 24px; }
+.footer-links a { color: var(--muted); text-decoration: none; font-size: 13px; }
+.footer-links a:hover { color: var(--text); }
+.footer-copy { font-size: 12px; color: var(--muted); }
+
+/* ── PASSWORD FIELD ── */
+.password-section { margin-top: 20px; }
+.password-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+.password-label span { font-size: 16px; }
+.password-wrap { position: relative; display: flex; align-items: center; }
+.password-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 48px 13px 16px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.password-input::placeholder { color: var(--muted); }
+.password-input:focus { border-color: var(--accent); }
+.password-toggle {
+  position: absolute;
+  right: 14px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.2s;
+}
+.password-toggle:hover { color: var(--text); }
+.password-hint { font-size: 11px; color: var(--muted); margin-top: 6px; opacity: 0.7; }
+
+@media (max-width: 768px) { nav { padding: 14px 20px; } .nav-links { display: none; } .converter-card { padding: 24px 16px; } .breadcrumb { padding: 12px 20px; } footer { flex-direction: column; text-align: center; } }
+</style>
+</head>
+<body>
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<nav>
+  <a href="/" class="nav-logo">Rak<span>Docs</span></a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/#tools">All Tools</a>
+  </div>
+  <a href="https://play.google.com/store" class="nav-cta">📱 Get App</a>
+</nav>
+
+<div class="breadcrumb">
+  <a href="/">Home</a> › <a href="/#tools">Tools</a> › Bank Statement to Excel
+</div>
+
+<section class="tool-hero">
+  <span class="tool-hero-icon">🏦</span>
+  <h1>Bank Statement to Excel — <span>Free Online</span></h1>
+  <p>Upload your bank statement PDF and get a clean Excel file with all transactions, dates, and amounts extracted automatically. No signup, no software, 100% free.</p>
+  <div class="bank-badges">
+    <span class="bank-badge">HDFC Bank</span>
+    <span class="bank-badge">SBI</span>
+    <span class="bank-badge">ICICI Bank</span>
+    <span class="bank-badge">Axis Bank</span>
+    <span class="bank-badge">Kotak</span>
+    <span class="bank-badge">Bank of Baroda</span>
+    <span class="bank-badge">PNB</span>
+    <span class="bank-badge">Yes Bank</span>
+    <span class="bank-badge">+ All banks</span>
+  </div>
+</section>
+
+<section class="converter-section">
+  <div class="converter-card">
+    <div class="format-flow">
+      <div class="format-pill format-from">Bank PDF</div>
+      <div class="format-arrow">→</div>
+      <div class="format-pill format-to">XLSX</div>
+    </div>
+    <div class="drop-zone" id="dropZone"
+         onclick="document.getElementById('file-input').click()"
+         ondragover="handleDragOver(event)"
+         ondragleave="handleDragLeave(event)"
+         ondrop="handleDrop(event)">
+      <span class="drop-zone-icon">🏦</span>
+      <div class="drop-zone-title">Drop your bank statement here</div>
+      <div class="drop-zone-sub">Supports PDF format · Max 50MB</div>
+      <button class="browse-btn" onclick="event.stopPropagation(); document.getElementById('file-input').click()">Browse Files</button>
+    </div>
+    <input type="file" id="file-input" accept=".pdf" onchange="handleFileSelect(event)"/>
+    <div class="file-selected" id="fileSelected">
+      <span class="file-icon-big">🏦</span>
+      <div class="file-info">
+        <div class="file-name-display" id="fileName">—</div>
+        <div class="file-size-display" id="fileSize">—</div>
+      </div>
+      <button class="file-remove" onclick="removeFile()">✕ Remove</button>
+    </div>
+
+    <!-- PASSWORD FIELD -->
+    <div class="password-section">
+      <div class="password-label"><span>🔐</span> PDF Password (optional)</div>
+      <div class="password-wrap">
+        <input type="password" id="pdfPassword" class="password-input" placeholder="Enter password if your bank statement is protected"/>
+        <button class="password-toggle" onclick="togglePasswordVisibility()" id="pwToggle" title="Show/hide password">👁</button>
+      </div>
+      <div class="password-hint">Most bank statements from net banking are password protected. Enter your password above — it is never stored or logged.</div>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+    <button class="convert-btn" id="convertBtn" onclick="startConversion()">⚡ Convert to Excel — It's Free</button>
+    <div class="progress-section" id="progressSection">
+      <div class="progress-step-text" id="progressStep">Uploading...</div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+    <div class="success-section" id="successSection">
+      <span class="success-icon">✅</span>
+      <div class="success-title">Conversion Complete!</div>
+      <div class="success-sub" id="successSub">Your Excel file is ready to download</div>
+      <button class="download-btn" onclick="downloadFile()">⬇️ Download Excel File</button>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURE HIGHLIGHTS -->
+<section class="features-strip">
+  <div class="feature-item">
+    <span class="feature-item-icon">📅</span>
+    <div class="feature-item-title">Auto Date Extraction</div>
+    <div class="feature-item-desc">Transaction dates parsed and formatted cleanly in Excel columns.</div>
+  </div>
+  <div class="feature-item">
+    <span class="feature-item-icon">💰</span>
+    <div class="feature-item-title">Debit & Credit Columns</div>
+    <div class="feature-item-desc">All debit and credit amounts separated into individual columns.</div>
+  </div>
+  <div class="feature-item">
+    <span class="feature-item-icon">🏦</span>
+    <div class="feature-item-title">All Banks Supported</div>
+    <div class="feature-item-desc">Works with HDFC, SBI, ICICI, Axis, Kotak, BOB, PNB, Yes Bank and more.</div>
+  </div>
+  <div class="feature-item">
+    <span class="feature-item-icon">🔒</span>
+    <div class="feature-item-title">100% Private & Secure</div>
+    <div class="feature-item-desc">Files are deleted immediately after conversion. We never store your data.</div>
+  </div>
+</section>
+
+<section class="info-section">
+  <h2>About Bank Statement to Excel Converter</h2>
+  <p>Bank statements from your net banking portal come as PDF files that are difficult to work with — you cannot filter, sort, or analyse transactions directly. RakDocs converts your bank statement PDF into a fully editable Excel spreadsheet in seconds.</p>
+  <p>The converter automatically extracts every transaction row — including date, transaction narration/description, debit amount, credit amount, and closing balance — and places each into its own column. The result is a clean XLSX file you can open in Microsoft Excel, Google Sheets, or any spreadsheet software.</p>
+  <p>This tool works with digital bank statement PDFs (downloaded from net banking) as well as scanned paper statements. For the best accuracy, always use the digital PDF exported directly from your bank's app or website rather than a photographed or scanned copy.</p>
+  <p>RakDocs uses a dedicated backend server to handle all conversions. Your bank statement is processed securely and deleted immediately after you download the result — we never store, share, or access your financial documents.</p>
+</section>
+
+<section class="faq-section">
+  <h2>Frequently Asked Questions</h2>
+  <div class="faq-item">
+    <button class="faq-btn" onclick="toggleFaq(this)">Is the bank statement to Excel converter free? <span class="faq-icon">+</span></button>
+    <div class="faq-answer">Yes, completely free. No signup, no credit card, no hidden fees. Upload your bank statement PDF and download the Excel file instantly.</div>
+  </div>
+  <div class="faq-item">
+    <button class="faq-btn" onclick="toggleFaq(this)">Which banks are supported? <span class="faq-icon">+</span></button>
+    <div class="faq-answer">RakDocs works with bank statements from HDFC Bank, SBI, ICICI Bank, Axis Bank, Kotak Mahindra, Bank of Baroda, Punjab National Bank, Yes Bank, and most international banks. Both digital (text-based) PDFs and scanned statements are supported.</div>
+  </div>
+  <div class="faq-item">
+    <button class="faq-btn" onclick="toggleFaq(this)">Is my bank statement safe to upload? <span class="faq-icon">+</span></button>
+    <div class="faq-answer">Yes. Your file is processed securely on our server and deleted immediately after conversion. We never store, read, or share your financial data. The conversion happens in seconds and no one at RakDocs ever sees your file.</div>
+  </div>
+  <div class="faq-item">
+    <button class="faq-btn" onclick="toggleFaq(this)">What data gets extracted into Excel? <span class="faq-icon">+</span></button>
+    <div class="faq-answer">The converter extracts transaction dates, narration/description, debit amounts, credit amounts, and closing balance into separate columns. Each transaction becomes one row so you can easily filter, sort, and analyse in Excel or Google Sheets.</div>
+  </div>
+  <div class="faq-item">
+    <button class="faq-btn" onclick="toggleFaq(this)">What if my bank statement is password protected? <span class="faq-icon">+</span></button>
+    <div class="faq-answer">Password-protected PDFs are not supported directly. Remove the password first using a PDF unlocker tool, then upload the unlocked PDF here to convert to Excel.</div>
+  </div>
+  <div class="faq-item">
+    <button class="faq-btn" onclick="toggleFaq(this)">Can I convert scanned bank statements? <span class="faq-icon">+</span></button>
+    <div class="faq-answer">Yes. Scanned bank statement PDFs are processed using OCR technology. Accuracy is very high for clearly scanned documents. Digital PDFs from your bank's net banking portal will give the best results.</div>
+  </div>
+</section>
+
+<section class="other-tools">
+  <h2>More Free Tools</h2>
+  <div class="tools-grid">
+    <a href="/tools/pdf-to-excel.html" class="tool-card"><span class="tool-card-icon">📊</span><div class="tool-card-name">PDF to Excel</div><div class="tool-card-desc">Extract tables from any PDF into Excel spreadsheets.</div></a>
+    <a href="/tools/pdf-to-word.html" class="tool-card"><span class="tool-card-icon">📄</span><div class="tool-card-name">PDF to Word</div><div class="tool-card-desc">Convert PDF to editable Word document (DOCX).</div></a>
+    <a href="/tools/word-to-pdf.html" class="tool-card"><span class="tool-card-icon">📝</span><div class="tool-card-name">Word to PDF</div><div class="tool-card-desc">Convert Word documents (DOCX) to PDF online free.</div></a>
+    <a href="/tools/excel-to-pdf.html" class="tool-card"><span class="tool-card-icon">📈</span><div class="tool-card-name">Excel to PDF</div><div class="tool-card-desc">Convert Excel spreadsheets (XLSX) to PDF online free.</div></a>
+    <a href="/tools/compress-pdf.html" class="tool-card"><span class="tool-card-icon">🗜️</span><div class="tool-card-name">Compress PDF</div><div class="tool-card-desc">Reduce PDF file size online for free.</div></a>
+    <a href="/tools/image-to-pdf.html" class="tool-card"><span class="tool-card-icon">🖼️</span><div class="tool-card-name">Image to PDF</div><div class="tool-card-desc">Convert JPG, PNG images to PDF online free.</div></a>
+    <a href="/tools/pdf-to-text.html" class="tool-card"><span class="tool-card-icon">🔤</span><div class="tool-card-name">PDF to Text</div><div class="tool-card-desc">Extract text from PDF online free.</div></a>
+    <a href="/tools/ppt-to-pdf.html" class="tool-card"><span class="tool-card-icon">📑</span><div class="tool-card-name">PPT to PDF</div><div class="tool-card-desc">Convert PowerPoint presentations to PDF free.</div></a>
+  </div>
+</section>
+
+<footer>
+  <a href="/" class="footer-logo">RakDocs</a>
+  <div class="footer-links">
+    <a href="/privacy.html">Privacy</a>
+    <a href="/terms.html">Terms</a>
+  </div>
+  <div class="footer-copy">© 2026 RakDocs. Free PDF tools for everyone.</div>
+</footer>
+
+<script>
+const TOOL_TYPE = 'bank-statement-to-excel';
+const TOOL_TO = 'XLSX';
+const BACKEND_URL = 'https://rakdocs-backend-production.up.railway.app';
+
+let selectedFile = null;
+let convertedBlob = null;
+let convertedName = '';
+
+function handleFileSelect(e) { const file = e.target.files[0]; if (file) setFile(file); }
+function handleDragOver(e) { e.preventDefault(); document.getElementById('dropZone').classList.add('dragover'); }
+function handleDragLeave(e) { document.getElementById('dropZone').classList.remove('dragover'); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) setFile(file);
+}
+function setFile(file) {
+  selectedFile = file;
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = formatSize(file.size);
+  document.getElementById('fileSelected').classList.add('show');
+  hideError();
+  resetConversion();
+}
+function removeFile() {
+  selectedFile = null;
+  document.getElementById('fileSelected').classList.remove('show');
+  document.getElementById('file-input').value = '';
+  resetConversion();
+}
+function formatSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+async function startConversion() {
+  if (!selectedFile) { showError('Please select a bank statement PDF first.'); return; }
+  hideError(); resetConversion();
+  const btn = document.getElementById('convertBtn');
+  btn.disabled = true; btn.textContent = '⏳ Converting...';
+  showProgress(5, 'Connecting to server...');
+  try {
+    const fd = new FormData();
+    fd.append('conversionType', TOOL_TYPE);
+    fd.append('file', selectedFile);
+    const pwd = document.getElementById('pdfPassword').value.trim();
+    if (pwd) fd.append('pdfPassword', pwd);
+    showProgress(20, 'Uploading bank statement...');
+    const response = await fetch(`${BACKEND_URL}/convert`, { method: 'POST', body: fd });
+    showProgress(70, 'Extracting transactions...');
+    if (response.status === 429) throw new Error('Too many requests. Please wait a moment.');
+    if (!response.ok) {
+      let msg = 'Conversion failed';
+      try { const j = await response.json(); msg = j.error || msg; } catch(_) {}
+      if (msg.toLowerCase().includes('password') || msg.toLowerCase().includes('encrypted')) {
+        throw new Error('Wrong password or PDF is encrypted. Please check your password and try again.');
+      }
+      throw new Error(msg);
+    }
+    showProgress(90, 'Preparing Excel file...');
+    const blob = await response.blob();
+    const baseName = selectedFile.name.replace(/\.[^.]+$/, '');
+    convertedName = `${baseName}_transactions.xlsx`;
+    convertedBlob = blob;
+    showProgress(100, '✅ Done!');
+    setTimeout(() => {
+      document.getElementById('progressSection').classList.remove('show');
+      document.getElementById('successSection').classList.add('show');
+      document.getElementById('successSub').textContent = `${convertedName} is ready`;
+      btn.disabled = false; btn.textContent = '⚡ Convert Another Statement';
+    }, 500);
+  } catch(err) {
+    document.getElementById('progressSection').classList.remove('show');
+    showError(err.message || 'Something went wrong. Please try again.');
+    btn.disabled = false; btn.textContent = "⚡ Convert to Excel — It's Free";
+  }
+}
+
+function togglePasswordVisibility() {
+  const input = document.getElementById('pdfPassword');
+  const btn   = document.getElementById('pwToggle');
+  if (input.type === 'password') { input.type = 'text';  btn.textContent = '🙈'; }
+  else                           { input.type = 'password'; btn.textContent = '👁'; }
+}
+
+function downloadFile() {
+  if (!convertedBlob) return;
+  const url = URL.createObjectURL(convertedBlob);
+  const a = document.createElement('a');
+  a.href = url; a.download = convertedName; a.click();
+  URL.revokeObjectURL(url);
+}
+function showProgress(pct, text) {
+  document.getElementById('progressSection').classList.add('show');
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressStep').textContent = text;
+}
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = '⚠️ ' + msg;
+  el.classList.add('show');
+}
+function hideError() { document.getElementById('errorMsg').classList.remove('show'); }
+function resetConversion() {
+  convertedBlob = null;
+  document.getElementById('successSection').classList.remove('show');
+  document.getElementById('progressSection').classList.remove('show');
+  document.getElementById('progressFill').style.width = '0%';
+  const btn = document.getElementById('convertBtn');
+  btn.disabled = false;
+  btn.textContent = "⚡ Convert to Excel — It's Free";
+}
+function toggleFaq(btn) {
+  const answer = btn.nextElementSibling;
+  const icon = btn.querySelector('.faq-icon');
+  const isOpen = answer.style.display === 'block';
+  document.querySelectorAll('.faq-answer').forEach(a => a.style.display = 'none');
+  document.querySelectorAll('.faq-icon').forEach(s => s.textContent = '+');
+  if (!isOpen) { answer.style.display = 'block'; icon.textContent = '−'; }
+}
+fetch(`${BACKEND_URL}/health`).catch(() => {});
+</script>
+
+<script>(function(s){s.dataset.zone='10955073',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+</body>
+</html>
