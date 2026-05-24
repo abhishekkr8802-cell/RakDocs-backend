@@ -60,7 +60,7 @@ except Exception as e:
 }
 
 // Python script for bank statement PDF → Excel extraction
-function buildBankStatementScript(inputPath, outputPath) {
+function buildBankStatementScript(inputPath, outputPath, password = '') {
   return `
 import sys, re
 try:
@@ -101,7 +101,8 @@ try:
     rows_written = 0
     all_text_rows = []
 
-    with pdfplumber.open('${inputPath}') as pdf:
+    pdf_password = "${password.replace(/"/g, '\\"')}" or None
+    with pdfplumber.open('${inputPath}', password=pdf_password) as pdf:
         for page in pdf.pages:
             # Try structured table extraction first
             tables = page.extract_tables()
@@ -260,11 +261,16 @@ app.post('/convert', upload.single('file'), async (req, res) => {
 
     } else if (conversionType === 'bank-statement-to-excel') {
       const pyScript = path.join(jobDir, 'bank_convert.py');
-      fs.writeFileSync(pyScript, buildBankStatementScript(inputPath, outputPath));
+      const pdfPassword = (req.body.pdfPassword || '').trim();
+      fs.writeFileSync(pyScript, buildBankStatementScript(inputPath, outputPath, pdfPassword));
       const { error, stdout, stderr } = await run(`python3 "${pyScript}"`);
       console.log('[bank-statement]', stdout.trim() || stderr.trim());
       if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size < 100) {
-        throw new Error('Bank statement extraction failed: ' + (stderr || 'output empty or missing. Make sure pdfplumber and openpyxl are installed.'));
+        const errMsg = stderr || '';
+        if (errMsg.toLowerCase().includes('password') || errMsg.toLowerCase().includes('encrypted') || errMsg.toLowerCase().includes('wrong password')) {
+          throw new Error('PDF is password protected. Please enter the correct password and try again.');
+        }
+        throw new Error('Bank statement extraction failed: ' + (errMsg || 'output empty or missing.'));
       }
       console.log('[bank-statement ✅] Output:', fs.statSync(outputPath).size, 'bytes');
 
