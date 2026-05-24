@@ -1,6 +1,6 @@
 FROM node:18-slim
 
-RUN RUN apt-get update && apt-get install -y python3 python3-pip python3-dev gcc --no-install-recommends \
+RUN apt-get update && apt-get install -y python3 python3-pip python3-dev gcc --no-install-recommends \
     && pip3 install pdf2docx pdfplumber openpyxl pdfminer.six --break-system-packages \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
