@@ -13,7 +13,11 @@ const fs   = require('fs');
 const path = require('path');
 
 const app  = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 8080;
+
+app.listen(port, "0.0.0.0", () => {
+    console.log(`Server is running safely on port ${port}`);
+});
 
 app.use(compression());
 app.use(cors());
