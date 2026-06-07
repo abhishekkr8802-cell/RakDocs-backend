@@ -1,9 +1,3 @@
-// ─────────────────────────────────────────────────────────────
-//  RakDocs Backend — Production-ready conversion server
-//  Deploy on Render.com for FREE (no credit card needed)
-//  Your API key stays here — never inside the mobile app
-// ─────────────────────────────────────────────────────────────
-
 const express = require('express');
 const multer  = require('multer');
 const cors    = require('cors');
@@ -13,13 +7,11 @@ const fs   = require('fs');
 const path = require('path');
 
 const app  = express();
-const port = process.env.PORT || 8080;
-
-
+const PORT = process.env.PORT || 8080;  // ✅ uppercase PORT, used consistently
 
 app.use(compression());
 app.use(cors({
-  origin: ['https://rakdocs.netlify.app', 'http://localhost:3000', 'http://localhost:5173'],
+  origin: '*',
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type']
 }));
@@ -44,19 +36,13 @@ function run(cmd) {
   });
 }
 
-// Python script for clean pdf2docx conversion
 function buildPythonScript(inputPath, outputPath) {
   return `
 import sys
 try:
     from pdf2docx import Converter
     cv = Converter('${inputPath}')
-    cv.convert('${outputPath}', 
-        start=0, 
-        end=None,
-        multi_processing=False,
-        cpu_count=1
-    )
+    cv.convert('${outputPath}', start=0, end=None, multi_processing=False, cpu_count=1)
     cv.close()
     print('SUCCESS')
 except Exception as e:
@@ -65,7 +51,6 @@ except Exception as e:
 `.trim();
 }
 
-// Python script for bank statement PDF → Excel extraction
 function buildBankStatementScript(inputPath, outputPath, password = '') {
   return `
 import sys, re
@@ -73,78 +58,58 @@ try:
     import pdfplumber
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment
-
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Transactions"
-
-    # Style helpers
     header_font  = Font(bold=True, color="FFFFFF", size=11)
     header_fill  = PatternFill("solid", fgColor="4F46E5")
     alt_fill     = PatternFill("solid", fgColor="F3F4F6")
     center       = Alignment(horizontal="center", vertical="center")
-
     headers = ["Date", "Description / Narration", "Debit (Dr)", "Credit (Cr)", "Balance"]
     for col, h in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=h)
         cell.font   = header_font
         cell.fill   = header_fill
         cell.alignment = center
-
-    # Column widths
     ws.column_dimensions["A"].width = 14
     ws.column_dimensions["B"].width = 50
     ws.column_dimensions["C"].width = 14
     ws.column_dimensions["D"].width = 14
     ws.column_dimensions["E"].width = 16
-
-    # Regex patterns for common bank statement formats
-    # Matches: date | narration | debit | credit | balance
-    # Handles both comma and period as thousand separators
     amount_pat = r'[\\d,]+\\.\\d{2}'
     date_pat   = r'\\d{1,2}[\\-/.]\\d{1,2}[\\-/.]\\d{2,4}|\\d{2,4}[\\-/.]\\d{1,2}[\\-/.]\\d{1,2}'
-
     rows_written = 0
     all_text_rows = []
-
     pdf_password = "${password.replace(/"/g, '\\"')}" or None
     with pdfplumber.open('${inputPath}', password=pdf_password) as pdf:
         for page in pdf.pages:
-            # Try structured table extraction first
             tables = page.extract_tables()
             if tables:
                 for table in tables:
                     for row in table:
                         if not row: continue
                         cleaned = [str(c).strip() if c else "" for c in row]
-                        # Skip header rows
                         if any(kw in " ".join(cleaned).lower() for kw in ["date","narration","particulars","description","debit","credit","balance","dr","cr","transaction"]):
                             continue
                         if not any(cleaned): continue
-                        # Find date cell
                         date_val = ""
                         for cell in cleaned:
                             if re.search(date_pat, cell):
                                 date_val = cell
                                 break
                         if not date_val and rows_written > 0:
-                            continue  # skip rows with no date unless first page
-
-                        # Extract amounts — last columns are usually debit, credit, balance
+                            continue
                         amounts = [c for c in cleaned if re.match(r'^[\\d,]+\\.\\d{2}$', c.replace(" ",""))]
                         narration = ""
                         for cell in cleaned:
                             if cell and cell != date_val and not re.match(r'^[\\d,]+\\.\\d{2}$', cell.replace(" ","")):
                                 narration = cell
                                 break
-
                         debit  = amounts[0] if len(amounts) >= 3 else (amounts[0] if len(amounts) == 1 else "")
                         credit = amounts[1] if len(amounts) >= 3 else (amounts[1] if len(amounts) >= 2 else "")
                         balance= amounts[-1] if len(amounts) >= 1 else ""
-
                         if len(amounts) == 2:
                             debit, credit, balance = "", amounts[0], amounts[1]
-
                         row_num = rows_written + 2
                         ws.cell(row=row_num, column=1, value=date_val)
                         ws.cell(row=row_num, column=2, value=narration)
@@ -156,33 +121,25 @@ try:
                                 ws.cell(row=row_num, column=col).fill = alt_fill
                         rows_written += 1
             else:
-                # Fallback: plain text line parsing
                 text = page.extract_text() or ""
                 for line in text.split("\\n"):
                     all_text_rows.append(line)
-
-    # If table extraction yielded nothing, parse plain text
     if rows_written == 0 and all_text_rows:
         for line in all_text_rows:
             line = line.strip()
             if not line: continue
-            # Must contain a date to be a transaction line
             date_match = re.search(date_pat, line)
             if not date_match: continue
-            # Skip header lines
             if any(kw in line.lower() for kw in ["date","narration","particulars","debit","credit","balance"]):
                 continue
             date_val  = date_match.group()
             remainder = line[date_match.end():].strip()
             amounts   = re.findall(amount_pat, remainder)
-            # Narration = text before first amount
             first_amt = re.search(amount_pat, remainder)
             narration = remainder[:first_amt.start()].strip() if first_amt else remainder
-
             debit   = amounts[0] if len(amounts) >= 3 else ""
             credit  = amounts[1] if len(amounts) >= 3 else (amounts[0] if len(amounts) == 2 else "")
             balance = amounts[-1] if amounts else ""
-
             row_num = rows_written + 2
             ws.cell(row=row_num, column=1, value=date_val)
             ws.cell(row=row_num, column=2, value=narration)
@@ -193,18 +150,12 @@ try:
                 for col in range(1, 6):
                     ws.cell(row=row_num, column=col).fill = alt_fill
             rows_written += 1
-
-    # Freeze header row
     ws.freeze_panes = "A2"
-
     if rows_written == 0:
-        # Write a helpful message if nothing extracted
         ws.cell(row=2, column=1, value="No transactions detected")
         ws.cell(row=2, column=2, value="Try a digital PDF from net banking instead of a scanned copy")
-
     wb.save('${outputPath}')
     print(f'SUCCESS: {rows_written} transactions extracted')
-
 except Exception as e:
     print('ERROR:', str(e), file=sys.stderr)
     sys.exit(1)
@@ -254,63 +205,51 @@ app.post('/convert', upload.single('file'), async (req, res) => {
     fs.writeFileSync(inputPath, req.file.buffer);
 
     if (conversionType === 'pdf-to-word') {
-      // Write python script to file (avoids shell escaping issues)
       const pyScript = path.join(jobDir, 'convert.py');
       fs.writeFileSync(pyScript, buildPythonScript(inputPath, outputPath));
-
-      const { error, stdout, stderr } = await run(`python3 "${pyScript}"`);
-
-      if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size < 100) {
-        throw new Error('pdf2docx conversion failed: ' + (stderr || 'output file empty or missing'));
-      }
-      console.log('[pdf2docx ✅] Output:', fs.statSync(outputPath).size, 'bytes');
+      const { stderr } = await run(`python3 "${pyScript}"`);
+      if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size < 100)
+        throw new Error('pdf2docx conversion failed: ' + (stderr || 'output empty'));
+      console.log('[pdf2docx ✅]', fs.statSync(outputPath).size, 'bytes');
 
     } else if (conversionType === 'bank-statement-to-excel') {
       const pyScript = path.join(jobDir, 'bank_convert.py');
       const pdfPassword = (req.body.pdfPassword || '').trim();
       fs.writeFileSync(pyScript, buildBankStatementScript(inputPath, outputPath, pdfPassword));
-      const { error, stdout, stderr } = await run(`python3 "${pyScript}"`);
+      const { stdout, stderr } = await run(`python3 "${pyScript}"`);
       console.log('[bank-statement]', stdout.trim() || stderr.trim());
       if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size < 100) {
         const errMsg = stderr || '';
-        if (errMsg.toLowerCase().includes('password') || errMsg.toLowerCase().includes('encrypted') || errMsg.toLowerCase().includes('wrong password')) {
-          throw new Error('PDF is password protected. Please enter the correct password and try again.');
-        }
-        throw new Error('Bank statement extraction failed: ' + (errMsg || 'output empty or missing.'));
+        if (errMsg.toLowerCase().includes('password') || errMsg.toLowerCase().includes('encrypted'))
+          throw new Error('PDF is password protected. Please enter the correct password.');
+        throw new Error('Bank statement extraction failed: ' + (errMsg || 'output empty'));
       }
-      console.log('[bank-statement ✅] Output:', fs.statSync(outputPath).size, 'bytes');
 
     } else if (conversionType === 'pdf-to-txt') {
-      // Use pdfminer via python for clean text extraction
       const pyScript = path.join(jobDir, 'extract.py');
       fs.writeFileSync(pyScript, `
 from pdfminer.high_level import extract_text
 text = extract_text('${inputPath}')
 with open('${outputPath}', 'w', encoding='utf-8') as f:
     f.write(text)
-print('SUCCESS')
-      `.trim());
+print('SUCCESS')`.trim());
       await run(`python3 "${pyScript}"`);
       if (!fs.existsSync(outputPath)) throw new Error('PDF→TXT failed');
 
     } else {
-      // Office → PDF via LibreOffice (this works fine)
       await run(`libreoffice --headless --convert-to ${outExt} --outdir "${jobDir}" "${inputPath}"`);
       const files = fs.readdirSync(jobDir);
       const found = files.find(f => f.endsWith('.' + outExt) && !f.startsWith('input.'));
-      if (!found) throw new Error(`Conversion to ${outExt} failed. Dir: [${files.join(', ')}]`);
-      // rename to outputPath for uniform handling below
+      if (!found) throw new Error(`Conversion to ${outExt} failed`);
       fs.renameSync(path.join(jobDir, found), outputPath);
     }
 
     const resultBuffer   = fs.readFileSync(outputPath);
     const outputFilename = `${baseName}_converted.${outExt}`;
-
     res.setHeader('Content-Type', MIME_MAP[outExt] || 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${outputFilename}"`);
     res.setHeader('X-Output-Filename', outputFilename);
     res.send(resultBuffer);
-
     console.log(`[✅ DONE] ${outputFilename} — ${resultBuffer.length} bytes`);
 
   } catch (err) {
@@ -321,6 +260,7 @@ print('SUCCESS')
   }
 });
 
+// ✅ Single listen, uppercase PORT, bound to 0.0.0.0
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`RakDocs v11.0 | Port: ${PORT}`);
   run('python3 -c "from pdf2docx import Converter; print(\'pdf2docx ready ✅\')"')
