@@ -8,5 +8,9 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install
 COPY server.js ./
-EXPOSE 3000
+
+# Dynamically fall back to 8080 if PORT isn't set externally
+ENV PORT=8080
+EXPOSE 8080
+
 CMD ["node", "server.js"]
